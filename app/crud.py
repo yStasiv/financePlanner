@@ -29,14 +29,16 @@ def create_user(db: Session, user: schemas.UserCreate):
 
 
 def get_expenses(db: Session, owner_id: int, start_date: Optional[date] = None, end_date: Optional[date] = None, category_id: Optional[int] = None, skip: int = 0, limit: int = 100):
-    query = db.query(models.Expense).options(joinedload(models.Expense.category)).filter(models.Expense.owner_id == owner_id)
+    query = db.query(models.Expense).filter(models.Expense.owner_id == owner_id)
     if start_date:
         query = query.filter(models.Expense.date >= start_date)
     if end_date:
         query = query.filter(models.Expense.date <= end_date)
     if category_id:
         query = query.filter(models.Expense.category_id == category_id)
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.options(joinedload(models.Expense.category)).offset(skip).limit(limit).all()
+    return items, total
 
 
 def create_user_expense(db: Session, expense: schemas.ExpenseCreate, user_id: int):
@@ -48,14 +50,16 @@ def create_user_expense(db: Session, expense: schemas.ExpenseCreate, user_id: in
 
 
 def get_incomes(db: Session, owner_id: int, start_date: Optional[date] = None, end_date: Optional[date] = None, category_id: Optional[int] = None, skip: int = 0, limit: int = 100):
-    query = db.query(models.Income).options(joinedload(models.Income.category)).filter(models.Income.owner_id == owner_id)
+    query = db.query(models.Income).filter(models.Income.owner_id == owner_id)
     if start_date:
         query = query.filter(models.Income.date >= start_date)
     if end_date:
         query = query.filter(models.Income.date <= end_date)
     if category_id:
         query = query.filter(models.Income.category_id == category_id)
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.options(joinedload(models.Income.category)).offset(skip).limit(limit).all()
+    return items, total
 
 
 def create_user_income(db: Session, income: schemas.IncomeCreate, user_id: int):
@@ -108,3 +112,47 @@ def delete_expense_category(db: Session, category_id: int, owner_id: int):
 def delete_income_category(db: Session, category_id: int, owner_id: int):
     db.query(models.IncomeCategory).filter(models.IncomeCategory.id == category_id, models.IncomeCategory.owner_id == owner_id).delete()
     db.commit()
+
+
+def update_income(db: Session, income_id: int, income_data: schemas.IncomeUpdate, owner_id: int):
+    db_income = db.query(models.Income).filter(models.Income.id == income_id, models.Income.owner_id == owner_id).first()
+    if db_income:
+        update_data = income_data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_income, key, value)
+        db.commit()
+        db.refresh(db_income)
+    return db_income
+
+
+def update_expense(db: Session, expense_id: int, expense_data: schemas.ExpenseUpdate, owner_id: int):
+    db_expense = db.query(models.Expense).filter(models.Expense.id == expense_id, models.Expense.owner_id == owner_id).first()
+    if db_expense:
+        update_data = expense_data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_expense, key, value)
+        db.commit()
+        db.refresh(db_expense)
+    return db_expense
+
+
+def update_income_category(db: Session, category_id: int, category_data: schemas.IncomeCategoryUpdate, owner_id: int):
+    db_category = db.query(models.IncomeCategory).filter(models.IncomeCategory.id == category_id, models.IncomeCategory.owner_id == owner_id).first()
+    if db_category:
+        update_data = category_data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_category, key, value)
+        db.commit()
+        db.refresh(db_category)
+    return db_category
+
+
+def update_expense_category(db: Session, category_id: int, category_data: schemas.ExpenseCategoryUpdate, owner_id: int):
+    db_category = db.query(models.ExpenseCategory).filter(models.ExpenseCategory.id == category_id, models.ExpenseCategory.owner_id == owner_id).first()
+    if db_category:
+        update_data = category_data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_category, key, value)
+        db.commit()
+        db.refresh(db_category)
+    return db_category

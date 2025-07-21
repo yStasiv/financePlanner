@@ -11,6 +11,10 @@ class ExpenseCategoryCreate(ExpenseCategoryBase):
     pass
 
 
+class ExpenseCategoryUpdate(ExpenseCategoryBase):
+    name: Optional[str] = None
+
+
 class ExpenseCategory(ExpenseCategoryBase):
     id: int
 
@@ -26,6 +30,10 @@ class IncomeCategoryCreate(IncomeCategoryBase):
     pass
 
 
+class IncomeCategoryUpdate(IncomeCategoryBase):
+    name: Optional[str] = None
+
+
 class IncomeCategory(IncomeCategoryBase):
     id: int
 
@@ -37,7 +45,7 @@ class ExpenseBase(BaseModel):
     amount: float
     description: Optional[str] = Field(None, max_length=100)
     date: date
-    category_id: int
+    category_id: Optional[int] = None
 
 
 class ExpenseCreate(ExpenseBase):
@@ -47,17 +55,24 @@ class ExpenseCreate(ExpenseBase):
 class Expense(ExpenseBase):
     id: int
     owner_id: int
-    category: ExpenseCategory
+    category: Optional[ExpenseCategory] = None
 
     class Config:
         orm_mode = True
+
+
+class ExpenseUpdate(BaseModel):
+    amount: Optional[float] = None
+    description: Optional[str] = None
+    date: Optional[date] = None
+    category_id: Optional[int] = None
 
 
 class IncomeBase(BaseModel):
     amount: float
     description: Optional[str] = None
     date: date
-    category_id: int
+    category_id: Optional[int] = None
 
 
 class IncomeCreate(IncomeBase):
@@ -67,10 +82,17 @@ class IncomeCreate(IncomeBase):
 class Income(IncomeBase):
     id: int
     owner_id: int
-    category: IncomeCategory
+    category: Optional[IncomeCategory] = None
 
     class Config:
         orm_mode = True
+
+
+class IncomeUpdate(BaseModel):
+    amount: Optional[float] = None
+    description: Optional[str] = None
+    date: Optional[date] = None
+    category_id: Optional[int] = None
 
 
 class UserBase(BaseModel):
@@ -103,3 +125,5 @@ class TokenData(BaseModel):
 class FinancialData(BaseModel):
     incomes: List[Income]
     expenses: List[Expense]
+    total_incomes: int
+    total_expenses: int
