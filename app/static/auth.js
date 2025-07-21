@@ -258,19 +258,33 @@ async function loadFinancialData() {
     });
     if (response.ok) {
         const data = await response.json();
-        let totalIncome = 0;
-        let totalExpenses = 0;
 
+        // Calculate totals and aggregates
+        let totalIncome = 0;
+        const incomeByCategory = {};
         data.incomes.forEach(income => {
             totalIncome += income.amount;
+            const categoryName = income.category ? income.category.name : "Uncategorized";
+            if (!incomeByCategory[categoryName]) {
+                incomeByCategory[categoryName] = 0;
+            }
+            incomeByCategory[categoryName] += income.amount;
         });
 
+        let totalExpenses = 0;
+        const expenseByCategory = {};
         data.expenses.forEach(expense => {
             totalExpenses += expense.amount;
+            const categoryName = expense.category ? expense.category.name : "Uncategorized";
+            if (!expenseByCategory[categoryName]) {
+                expenseByCategory[categoryName] = 0;
+            }
+            expenseByCategory[categoryName] += expense.amount;
         });
 
         const balance = totalIncome - totalExpenses;
 
+        // Update summary elements
         if (document.getElementById("balance")) {
             document.getElementById("balance").textContent = balance.toFixed(2);
         }
@@ -281,12 +295,14 @@ async function loadFinancialData() {
             document.getElementById("total-expenses").textContent = totalExpenses.toFixed(2);
         }
 
+        // Update incomes list
         if (document.getElementById("incomes-list")) {
             const incomesList = document.getElementById("incomes-list");
             incomesList.innerHTML = "";
             data.incomes.forEach(income => {
                 const li = document.createElement("li");
-                li.textContent = `${income.description} (${income.category.name}): ${income.amount}`;
+                const categoryName = income.category ? income.category.name : "Uncategorized";
+                li.textContent = `${income.description} (${categoryName}): ${income.amount}`;
                 const deleteButton = document.createElement("button");
                 deleteButton.textContent = "Delete";
                 deleteButton.onclick = () => deleteIncome(income.id);
@@ -295,69 +311,35 @@ async function loadFinancialData() {
             });
         }
 
+        // Update expenses list
         if (document.getElementById("expenses-list")) {
             const expensesList = document.getElementById("expenses-list");
             expensesList.innerHTML = "";
-            const expenseByCategory = {};
             data.expenses.forEach(expense => {
                 const li = document.createElement("li");
-                li.textContent = `${expense.description} (${expense.category.name}): ${expense.amount}`;
+                const categoryName = expense.category ? expense.category.name : "Uncategorized";
+                li.textContent = `${expense.description} (${categoryName}): ${expense.amount}`;
                 const deleteButton = document.createElement("button");
                 deleteButton.textContent = "Delete";
                 deleteButton.onclick = () => deleteExpense(expense.id);
                 li.appendChild(deleteButton);
                 expensesList.appendChild(li);
-
-                if (!expenseByCategory[expense.category.name]) {
-                    expenseByCategory[expense.category.name] = 0;
-                }
-                expenseByCategory[expense.category.name] += expense.amount;
             });
+        }
 
+        // Update expense by category list
+        if (document.getElementById("expense-by-category-list")) {
             const expenseByCategoryList = document.getElementById("expense-by-category-list");
-            if (expenseByCategoryList) {
-                expenseByCategoryList.innerHTML = "";
-                for (const category in expenseByCategory) {
-                    const li = document.createElement("li");
-                    li.textContent = `${category}: ${expenseByCategory[category].toFixed(2)}`;
-                    expenseByCategoryList.appendChild(li);
-                }
-    
-                if (document.getElementById("chart")) {
-                    const options = {
-                        series: Object.values(expenseByCategory),
-                        chart: {
-                            type: 'pie',
-                        },
-                        labels: Object.keys(expenseByCategory),
-                        responsive: [{
-                            breakpoint: 480,
-                            options: {
-                                chart: {
-                                    width: 200
-                                },
-                                legend: {
-                                    position: 'bottom'
-                                }
-                            }
-                        }]
-                    };
-    
-                    const chart = new ApexCharts(document.querySelector("#chart"), options);
-                    chart.render();
-                }
+            expenseByCategoryList.innerHTML = "";
+            for (const category in expenseByCategory) {
+                const li = document.createElement("li");
+                li.textContent = `${category}: ${expenseByCategory[category].toFixed(2)}`;
+                expenseByCategoryList.appendChild(li);
             }
         }
 
+        // Update income by category list
         if (document.getElementById("income-by-category-list")) {
-            const incomeByCategory = {};
-            data.incomes.forEach(income => {
-                if (!incomeByCategory[income.category.name]) {
-                    incomeByCategory[income.category.name] = 0;
-                }
-                incomeByCategory[income.category.name] += income.amount;
-            });
-
             const incomeByCategoryList = document.getElementById("income-by-category-list");
             incomeByCategoryList.innerHTML = "";
             for (const category in incomeByCategory) {
@@ -365,6 +347,88 @@ async function loadFinancialData() {
                 li.textContent = `${category}: ${incomeByCategory[category].toFixed(2)}`;
                 incomeByCategoryList.appendChild(li);
             }
+        }
+
+        // Render combined chart for income and expenses by category
+        if (document.getElementById("chart")) {
+            const chartEl = document.getElementById("chart");
+            chartEl.innerHTML = ""; // Clear previous chart
+
+            const allCategories = [...new Set([...Object.keys(incomeByCategory), ...Object.keys(expenseByCategory)])].sort();
+
+            const incomeData = allCategories.map(cat => incomeByCategory[cat] || 0);
+            const expenseData = allCategories.map(cat => expenseByCategory[cat] || 0);
+
+            const options = {
+                series: [{
+                    name: 'Income',
+                    data: incomeData
+                }, {
+                    name: 'Expenses',
+                    data: expenseData
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 400,
+                    toolbar: {
+                        show: false
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '60%',
+                        endingShape: 'rounded'
+                    },
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    show: true,
+                    width: 2,
+                    colors: ['transparent']
+                },
+                xaxis: {
+                    categories: allCategories,
+                },
+                yaxis: {
+                    title: {
+                        text: 'Amount'
+                    }
+                },
+                fill: {
+                    opacity: 1
+                },
+                tooltip: {
+                    y: {
+                        formatter: function (val) {
+                            return val.toFixed(2);
+                        }
+                    }
+                },
+                title: {
+                    text: 'Income vs Expenses by Category',
+                    align: 'left'
+                },
+                legend: {
+                    position: 'top',
+                },
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            width: '100%'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+
+            const chart = new ApexCharts(chartEl, options);
+            chart.render();
         }
     }
 }
