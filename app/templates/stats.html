@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Statistics</h1>
+<div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <label for="start_date">From:</label>
+        <input type="date" id="start_date">
+        <label for="end_date">To:</label>
+        <input type="date" id="end_date">
+        <select id="date-range">
+            <option value="all">All time</option>
+            <option value="week">Last week</option>
+            <option value="month">Last month</option>
+            <option value="year">Last year</option>
+        </select>
+        <select id="category-filter">
+            <option value="all">All categories</option>
+        </select>
+        <button onclick="loadFinancialData()">Filter</button>
+    </div>
+    <div id="chart" style="width: 25%;"></div>
+</div>
+<div style="display: flex; justify-content: space-between;">
+    <div>
+        <h2>Incomes</h2>
+        <ul id="incomes-list"></ul>
+    </div>
+    <div>
+        <h2>Expenses</h2>
+        <ul id="expenses-list"></ul>
+    </div>
+    <div>
+        <h2>Income by Category</h2>
+        <ul id="income-by-category-list"></ul>
+    </div>
+    <div>
+        <h2>Expenses by Category</h2>
+        <ul id="expense-by-category-list"></ul>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        loadFinancialData();
+    });
+</script>
+{% endblock %}

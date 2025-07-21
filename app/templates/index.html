@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="float: right;">
+    <h2>Balance: <span id="balance">0</span></h2>
+</div>
+<h1>Finance Tracking</h1>
+
+<div style="display: flex; justify-content: space-around;">
+    <div>
+        <h2>Total Income: <span id="total-income">0</span></h2>
+    </div>
+    <div>
+        <h2>Total Expenses: <span id="total-expenses">0</span></h2>
+    </div>
+</div>
+
+
+<h2>Add Expense</h2>
+<form onsubmit="addExpense(event)">
+    <input type="number" name="amount" placeholder="Amount" required>
+    <input type="text" name="description" placeholder="Description (100 char max)" maxlength="100">
+    <input type="date" name="date" required>
+    <select name="category_id">
+        <!-- Categories will be populated dynamically -->
+    </select>
+    <button type="submit">Add Expense</button>
+</form>
+
+<h2>Add Income</h2>
+<form onsubmit="addIncome(event)">
+    <input type="number" name="amount" placeholder="Amount" required>
+    <input type="text" name="description" placeholder="Description (100 char max)" maxlength="100">
+    <input type="date" name="date" required>
+    <select name="category_id">
+        <!-- Categories will be populated dynamically -->
+    </select>
+    <button type="submit">Add Income</button>
+</form>
+
+<h2>Add Expense Category</h2>
+<form onsubmit="addExpenseCategory(event)">
+    <input type="text" name="name" placeholder="Category Name" required>
+    <button type="submit">Add Category</button>
+</form>
+
+<h2>Add Income Category</h2>
+<form onsubmit="addIncomeCategory(event)">
+    <input type="text" name="name" placeholder="Category Name" required>
+    <button type="submit">Add Category</button>
+</form>
+{% endblock %}

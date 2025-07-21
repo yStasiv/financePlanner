@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Categories</h1>
+
+<div style="display: flex; justify-content: space-between;">
+    <div>
+        <h2>Expense Categories</h2>
+        <ul id="expense-categories-list"></ul>
+        <form onsubmit="addExpenseCategory(event)">
+            <input type="text" name="name" placeholder="Category Name" required>
+            <button type="submit">Add</button>
+        </form>
+    </div>
+    <div>
+        <h2>Income Categories</h2>
+        <ul id="income-categories-list"></ul>
+        <form onsubmit="addIncomeCategory(event)">
+            <input type="text" name="name" placeholder="Category Name" required>
+            <button type="submit">Add</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        loadExpenseCategories();
+        loadIncomeCategories();
+    });
+</script>
+{% endblock %}
