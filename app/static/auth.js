@@ -39,7 +39,7 @@ function showApp() {
     document.getElementById("app-container").style.display = "block";
     loadCategories('income');
     loadCategories('expense');
-    loadFinancialData();
+    // loadFinancialData(); # TODO
     document.querySelectorAll('input[type="date"]').forEach(input => {
         input.valueAsDate = new Date();
     });
@@ -155,6 +155,8 @@ async function loadCategories(type) {
         });
         const categories = await response.json();
 
+        // (filterSelect logic moved to loadFinancialData)
+
         // Update select in add transaction form
         const select = document.querySelector(`form[onsubmit='add${type.charAt(0).toUpperCase() + type.slice(1)}(event)'] select[name='category_id']`);
         if (select) {
@@ -253,6 +255,57 @@ async function deleteCategory(type, id) {
 // ====================================================== Statistic page ============================================
 async function loadFinancialData() {
     const token = localStorage.getItem("access_token");
+    // Update filter select (category-filter) for both income and expense categories
+    const filterSelect = document.getElementById('category-filter');
+    if (filterSelect) {
+        // Clear and add default option
+        filterSelect.innerHTML = '<option value="all">All categories</option>';
+        try {
+            const [incomeRes, expenseRes] = await Promise.all([
+                fetch('/finances/income_categories/', { headers: { 'Authorization': 'Bearer ' + token } }),
+                fetch('/finances/expense_categories/', { headers: { 'Authorization': 'Bearer ' + token } })
+            ]);
+            const incomeCategories = incomeRes.ok ? await incomeRes.json() : [];
+            const expenseCategories = expenseRes.ok ? await expenseRes.json() : [];
+
+            // Add income categories, only one 'Uncategorized' for income
+            let incomeUncatAdded = false;
+            incomeCategories.forEach(category => {
+                if (category.name === 'Uncategorized') {
+                    if (incomeUncatAdded) return;
+                    incomeUncatAdded = true;
+                }
+                const option = document.createElement('option');
+                option.value = `income-${category.id}`;
+                option.textContent = category.name;
+                filterSelect.appendChild(option);
+            });
+
+            // Add separator if both exist
+            if (incomeCategories.length && expenseCategories.length) {
+                const separator = document.createElement('option');
+                separator.disabled = true;
+                separator.textContent = '-----';
+                separator.value = '';
+                filterSelect.appendChild(separator);
+            }
+
+            // Add expense categories, only one 'Uncategorized' for expense
+            let expenseUncatAdded = false;
+            expenseCategories.forEach(category => {
+                if (category.name === 'Uncategorized') {
+                    if (expenseUncatAdded) return;
+                    expenseUncatAdded = true;
+                }
+                const option = document.createElement('option');
+                option.value = `expense-${category.id}`;
+                option.textContent = category.name;
+                filterSelect.appendChild(option);
+            });
+        } catch (e) {
+            // ignore
+        }
+    }
     const startDateInput = document.getElementById("start_date");
     const endDateInput = document.getElementById("end_date");
     const dateRangeSelect = document.getElementById("date-range");
@@ -282,6 +335,8 @@ async function loadFinancialData() {
                 startDate = null;
                 endDate = null;
                 break;
+            case "custom":
+                break;
         }
         if (startDateInput) startDateInput.value = startDate;
         if (endDateInput) endDateInput.value = endDate;
@@ -290,7 +345,14 @@ async function loadFinancialData() {
     let url = "/finances/?";
     if (startDate) url += `start_date=${startDate}&`;
     if (endDate) url += `end_date=${endDate}&`;
-    if (categoryId && categoryId !== "all") url += `category_id=${categoryId}&`;
+    // Parse categoryId for new value format (income- or expense-)
+    let parsedCategoryId = categoryId;
+    if (categoryId && categoryId !== "all" && categoryId.includes('-')) {
+        const [type, id] = categoryId.split('-');
+        url += `category_type=${type}&category_id=${id}&`;
+    } else if (categoryId && categoryId !== "all") {
+        url += `category_id=${categoryId}&`;
+    }
     const response = await fetch(url, {
         headers: {
             "Authorization": "Bearer " + token
