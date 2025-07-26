@@ -1,31 +1,57 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .category-container {
+        display: flex;
+        justify-content: space-around;
+        gap: 2rem;
+    }
+    .category-section {
+        width: 45%;
+    }
+    .category-section ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    .category-section li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+    }
+    .category-section li:last-child {
+        border-bottom: none;
+    }
+    .category-section form {
+        margin-top: 1rem;
+    }
+    .edit-form {
+        display: flex;
+        gap: 5px;
+    }
+</style>
+
 <h1>Categories</h1>
 
-<div style="display: flex; justify-content: space-between;">
-    <div>
+<div class="category-container">
+    <div class="category-section">
         <h2>Expense Categories</h2>
         <ul id="expense-categories-list"></ul>
-        <form onsubmit="addExpenseCategory(event)">
-            <input type="text" name="name" placeholder="Category Name" required>
+        <form onsubmit="addCategory('expense', event)">
+            <input type="text" id="new-expense-category-name" placeholder="New category name" required>
             <button type="submit">Add</button>
         </form>
     </div>
-    <div>
+    <div class="category-section">
         <h2>Income Categories</h2>
         <ul id="income-categories-list"></ul>
-        <form onsubmit="addIncomeCategory(event)">
-            <input type="text" name="name" placeholder="Category Name" required>
+        <form onsubmit="addCategory('income', event)">
+            <input type="text" id="new-income-category-name" placeholder="New category name" required>
             <button type="submit">Add</button>
         </form>
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        loadExpenseCategories();
-        loadIncomeCategories();
-    });
-</script>
 {% endblock %}

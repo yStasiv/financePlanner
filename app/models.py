@@ -47,7 +47,7 @@ class Expense(Base):
     amount = Column(Float, index=True)
     description = Column(String(100), index=True)
     date = Column(Date, index=True)
-    category_id = Column(Integer, ForeignKey("expense_categories.id"))
+    category_id = Column(Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"))
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="expenses")
@@ -61,7 +61,7 @@ class Income(Base):
     amount = Column(Float, index=True)
     description = Column(String, index=True)
     date = Column(Date, index=True)
-    category_id = Column(Integer, ForeignKey("income_categories.id"))
+    category_id = Column(Integer, ForeignKey("income_categories.id", ondelete="SET NULL"))
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="incomes")

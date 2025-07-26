@@ -4,19 +4,12 @@ from typing import List, Optional
 from datetime import date
 
 from .. import crud, models, schemas
-from ..database import SessionLocal
+from ..database import get_db
 from ..auth import get_current_active_user
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@router.get("/finances/", response_model=schemas.FinancialData)
+@router.get("/", response_model=schemas.FinancialData)
 def read_finances(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
@@ -50,7 +43,7 @@ def update_user_income(income_id: int, income: schemas.IncomeUpdate, db: Session
 @router.delete("/incomes/{income_id}", status_code=204)
 def delete_user_income(income_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     crud.delete_income(db=db, income_id=income_id, owner_id=current_user.id)
-    return {"ok": True}
+    return
 
 @router.post("/expenses/", response_model=schemas.Expense)
 def create_expense_for_user(expense: schemas.ExpenseCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
@@ -66,7 +59,7 @@ def update_user_expense(expense_id: int, expense: schemas.ExpenseUpdate, db: Ses
 @router.delete("/expenses/{expense_id}", status_code=204)
 def delete_user_expense(expense_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     crud.delete_expense(db=db, expense_id=expense_id, owner_id=current_user.id)
-    return {"ok": True}
+    return
 
 @router.get("/income_categories/", response_model=List[schemas.IncomeCategory])
 def read_income_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
@@ -86,9 +79,39 @@ def update_income_category(category_id: int, category: schemas.IncomeCategoryUpd
 
 @router.delete("/income_categories/{category_id}", status_code=204)
 def delete_user_income_category(category_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
-    # Add logic to handle expenses with this category if needed
-    crud.delete_income_category(db=db, category_id=category_id, owner_id=current_user.id)
-    return {"ok": True}
+    # Отримуємо категорію, яку треба видалити
+    category_to_delete = db.query(models.IncomeCategory).filter(
+        models.IncomeCategory.id == category_id,
+        models.IncomeCategory.owner_id == current_user.id
+    ).first()
+
+    if not category_to_delete:
+        raise HTTPException(status_code=404, detail="Income category not found")
+
+    # Забороняємо видалення категорії "Без категорії"
+    if category_to_delete.name == "Uncategorized":
+        raise HTTPException(status_code=400, detail="Неможливо видалити стандартну категорію 'Без категорії'")
+
+    # Знаходимо або створюємо категорію "Без категорії"
+    default_category = db.query(models.IncomeCategory).filter(
+        models.IncomeCategory.name == "Uncategorized",
+        models.IncomeCategory.owner_id == current_user.id
+    ).first()
+
+    if not default_category:
+        # Створюємо нову, якщо не існує
+        new_default_category = models.IncomeCategory(name="Uncategorized", owner_id=current_user.id)
+        db.add(new_default_category)
+        db.flush()  # Отримуємо id для нової категорії
+        default_category = new_default_category
+
+    # Перепризначаємо всі доходи з цієї категорії на "Без категорії"
+    db.query(models.Income).filter(models.Income.category_id == category_id, models.Income.owner_id == current_user.id).update({"category_id": default_category.id})
+
+    # Видаляємо стару категорію
+    db.delete(category_to_delete)
+    db.commit()
+    return
 
 @router.get("/expense_categories/", response_model=List[schemas.ExpenseCategory])
 def read_expense_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
@@ -108,6 +131,36 @@ def update_expense_category(category_id: int, category: schemas.ExpenseCategoryU
 
 @router.delete("/expense_categories/{category_id}", status_code=204)
 def delete_user_expense_category(category_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
-    # Add logic to handle expenses with this category if needed
-    crud.delete_expense_category(db=db, category_id=category_id, owner_id=current_user.id)
-    return {"ok": True}
+    # Отримуємо категорію, яку треба видалити
+    category_to_delete = db.query(models.ExpenseCategory).filter(
+        models.ExpenseCategory.id == category_id,
+        models.ExpenseCategory.owner_id == current_user.id
+    ).first()
+
+    if not category_to_delete:
+        raise HTTPException(status_code=404, detail="Expense category not found")
+
+    # Забороняємо видалення категорії "Без категорії"
+    if category_to_delete.name == "Uncategorized":
+        raise HTTPException(status_code=400, detail="Неможливо видалити стандартну категорію 'Без категорії'")
+
+    # Знаходимо або створюємо категорію "Без категорії"
+    default_category = db.query(models.ExpenseCategory).filter(
+        models.ExpenseCategory.name == "Uncategorized",
+        models.ExpenseCategory.owner_id == current_user.id
+    ).first()
+
+    if not default_category:
+        # Створюємо нову, якщо не існує
+        new_default_category = models.ExpenseCategory(name="Uncategorized", owner_id=current_user.id)
+        db.add(new_default_category)
+        db.flush() # Отримуємо id для нової категорії
+        default_category = new_default_category
+
+    # Перепризначаємо всі витрати з цієї категорії на "Без категорії"
+    db.query(models.Expense).filter(models.Expense.category_id == category_id, models.Expense.owner_id == current_user.id).update({"category_id": default_category.id})
+
+    # Видаляємо стару категорію
+    db.delete(category_to_delete)
+    db.commit()
+    return
