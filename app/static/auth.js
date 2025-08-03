@@ -39,7 +39,7 @@ function showApp() {
     document.getElementById("app-container").style.display = "block";
     loadCategories('income');
     loadCategories('expense');
-    // loadFinancialData(); # TODO
+    loadFinancialData();
     document.querySelectorAll('input[type="date"]').forEach(input => {
         input.valueAsDate = new Date();
     });
@@ -155,8 +155,6 @@ async function loadCategories(type) {
         });
         const categories = await response.json();
 
-        // (filterSelect logic moved to loadFinancialData)
-
         // Update select in add transaction form
         const select = document.querySelector(`form[onsubmit='add${type.charAt(0).toUpperCase() + type.slice(1)}(event)'] select[name='category_id']`);
         if (select) {
@@ -258,7 +256,9 @@ async function loadFinancialData() {
     // Update filter select (category-filter) for both income and expense categories
     const filterSelect = document.getElementById('category-filter');
     if (filterSelect) {
-        // Clear and add default option
+        // Зберігаємо вибране значення
+        const prevValue = filterSelect.value;
+        // Очищаємо select через innerHTML
         filterSelect.innerHTML = '<option value="all">All categories</option>';
         try {
             const [incomeRes, expenseRes] = await Promise.all([
@@ -268,40 +268,35 @@ async function loadFinancialData() {
             const incomeCategories = incomeRes.ok ? await incomeRes.json() : [];
             const expenseCategories = expenseRes.ok ? await expenseRes.json() : [];
 
-            // Add income categories, only one 'Uncategorized' for income
-            let incomeUncatAdded = false;
+            // Додаємо категорії лише якщо їх value ще не додано у select
+            const addedValues = new Set();
+            Array.from(filterSelect.options).forEach(opt => addedValues.add(opt.value));
             incomeCategories.forEach(category => {
-                if (category.name === 'Uncategorized') {
-                    if (incomeUncatAdded) return;
-                    incomeUncatAdded = true;
+                const value = `income-${category.id}`;
+                if (!addedValues.has(value)) {
+                    addedValues.add(value);
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = `[Дохід] ${category.name}`;
+                    filterSelect.appendChild(option);
                 }
-                const option = document.createElement('option');
-                option.value = `income-${category.id}`;
-                option.textContent = category.name;
-                filterSelect.appendChild(option);
             });
-
-            // Add separator if both exist
-            if (incomeCategories.length && expenseCategories.length) {
-                const separator = document.createElement('option');
-                separator.disabled = true;
-                separator.textContent = '-----';
-                separator.value = '';
-                filterSelect.appendChild(separator);
-            }
-
-            // Add expense categories, only one 'Uncategorized' for expense
-            let expenseUncatAdded = false;
             expenseCategories.forEach(category => {
-                if (category.name === 'Uncategorized') {
-                    if (expenseUncatAdded) return;
-                    expenseUncatAdded = true;
+                const value = `expense-${category.id}`;
+                if (!addedValues.has(value)) {
+                    addedValues.add(value);
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = `[Витрата] ${category.name}`;
+                    filterSelect.appendChild(option);
                 }
-                const option = document.createElement('option');
-                option.value = `expense-${category.id}`;
-                option.textContent = category.name;
-                filterSelect.appendChild(option);
             });
+            // Відновлюємо вибране значення, якщо воно є серед опцій
+            if ([...filterSelect.options].some(opt => opt.value === prevValue)) {
+                filterSelect.value = prevValue;
+            } else {
+                filterSelect.value = 'all';
+            }
         } catch (e) {
             // ignore
         }
@@ -345,8 +340,7 @@ async function loadFinancialData() {
     let url = "/finances/?";
     if (startDate) url += `start_date=${startDate}&`;
     if (endDate) url += `end_date=${endDate}&`;
-    // Parse categoryId for new value format (income- or expense-)
-    let parsedCategoryId = categoryId;
+    // Додаємо категорію до запиту, якщо вибрана
     if (categoryId && categoryId !== "all" && categoryId.includes('-')) {
         const [type, id] = categoryId.split('-');
         url += `category_type=${type}&category_id=${id}&`;

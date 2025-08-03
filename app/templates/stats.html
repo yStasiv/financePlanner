@@ -19,6 +19,7 @@
             <option value="all">All categories</option>
         </select>
         <button onclick="loadFinancialData()">Filter</button>
+        <button onclick="resetCategoryFilter()">Скинути фільтр</button>
     </div>
     <div id="chart" style="width: 25%;"></div>
 </div>
@@ -42,6 +43,11 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
+    function resetCategoryFilter() {
+        document.getElementById('category-filter').value = 'all';
+        document.getElementById('date-range').value = 'all';
+        loadFinancialData();
+    }
     document.addEventListener("DOMContentLoaded", function() {
         loadFinancialData();
     });
