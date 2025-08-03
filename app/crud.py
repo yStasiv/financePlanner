@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
 from datetime import date
@@ -139,6 +140,8 @@ def update_expense(db: Session, expense_id: int, expense_data: schemas.ExpenseUp
 def update_income_category(db: Session, category_id: int, category_data: schemas.IncomeCategoryUpdate, owner_id: int):
     db_category = db.query(models.IncomeCategory).filter(models.IncomeCategory.id == category_id, models.IncomeCategory.owner_id == owner_id).first()
     if db_category:
+        if db_category.name == "Uncategorized":
+            raise HTTPException(status_code=400, detail="Cannot rename the default category 'Uncategorized'")
         update_data = category_data.dict(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_category, key, value)
@@ -148,8 +151,11 @@ def update_income_category(db: Session, category_id: int, category_data: schemas
 
 
 def update_expense_category(db: Session, category_id: int, category_data: schemas.ExpenseCategoryUpdate, owner_id: int):
+    """Update/rename an existing expense category."""
     db_category = db.query(models.ExpenseCategory).filter(models.ExpenseCategory.id == category_id, models.ExpenseCategory.owner_id == owner_id).first()
     if db_category:
+        if db_category.name == "Uncategorized":
+            raise HTTPException(status_code=400, detail="Cannot rename the default category 'Uncategorized'")
         update_data = category_data.dict(exclude_unset=True)
         for key, value in update_data.items():
             setattr(db_category, key, value)

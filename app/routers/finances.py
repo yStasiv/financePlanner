@@ -124,6 +124,7 @@ def create_expense_category_for_user(category: schemas.ExpenseCategoryCreate, db
 
 @router.put("/expense_categories/{category_id}", response_model=schemas.ExpenseCategory)
 def update_expense_category(category_id: int, category: schemas.ExpenseCategoryUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    """Update/rename an existing expense category."""
     db_category = crud.update_expense_category(db=db, category_id=category_id, category_data=category, owner_id=current_user.id)
     if db_category is None:
         raise HTTPException(status_code=404, detail="Expense category not found")
