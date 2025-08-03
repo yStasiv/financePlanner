@@ -24,6 +24,7 @@ class ExpenseCategory(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
+    limit = Column(Float, nullable=True)  # Expensive limit for the category
 
     owner = relationship("User", back_populates="expense_categories")
     __table_args__ = (UniqueConstraint('name', 'owner_id', name='_owner_expense_category_uc'),)

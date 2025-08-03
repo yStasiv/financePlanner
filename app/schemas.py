@@ -5,6 +5,7 @@ from typing import List, Optional
 
 class ExpenseCategoryBase(BaseModel):
     name: str
+    limit: Optional[float] = None
 
 
 class ExpenseCategoryCreate(ExpenseCategoryBase):
@@ -13,6 +14,7 @@ class ExpenseCategoryCreate(ExpenseCategoryBase):
 
 class ExpenseCategoryUpdate(ExpenseCategoryBase):
     name: Optional[str] = None
+    limit: Optional[float] = None
 
 
 class ExpenseCategory(ExpenseCategoryBase):

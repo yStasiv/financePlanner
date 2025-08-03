@@ -32,6 +32,14 @@ async def read_rating(request: Request):
 async def read_categories_page(request: Request):
     return templates.TemplateResponse("categories.html", {"request": request})
 
+@app.get("/investments")
+async def read_categories_page(request: Request):
+    return templates.TemplateResponse("investments.html", {"request": request})
+
+@app.get("/advices")
+async def read_categories_page(request: Request):
+    return templates.TemplateResponse("advices.html", {"request": request})
+
 @app.get("/login")
 async def read_login(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})

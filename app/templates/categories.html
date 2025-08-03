@@ -41,6 +41,7 @@
         <ul id="expense-categories-list"></ul>
         <form onsubmit="addCategory('expense', event)">
             <input type="text" id="new-expense-category-name" placeholder="New category name" required>
+            <input type="number" id="new-expense-category-limit" placeholder="Limit (optional)" min="0" step="0.01">
             <button type="submit">Add</button>
         </form>
     </div>

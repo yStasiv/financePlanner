@@ -51,19 +51,40 @@ async function addExpense(event) {
     const formData = new FormData(event.target);
     const data = Object.fromEntries(formData.entries());
     const token = localStorage.getItem("access_token");
-    const response = await fetch("/finances/expenses/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify(data)
-    });
-    if (response.ok) {
-        alert("Expense added!");
+    let warning = null;
+    let expenseAdded = false;
+    try {
+        const response = await fetch("/finances/expenses/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            expenseAdded = true;
+        } else {
+            // Якщо бекенд повертає warning, але не помилку
+            const error = await response.json();
+            if (error.detail && error.detail.message && error.detail.limit !== undefined) {
+                warning = error.detail;
+                expenseAdded = true; // все одно додаємо
+            } else {
+                throw new Error(error.detail || "Failed to add expense");
+            }
+        }
+    } catch (err) {
+        alert(err.message);
+        return;
+    }
+    if (expenseAdded) {
+        let msg = "Expense added!";
+        if (warning) {
+            msg += `\n\nПопередження: ${warning.message}\nЛіміт: ${warning.limit}\nСума: ${warning.total}\nПеревищено: ${warning.exceeded}`;
+        }
+        alert(msg);
         loadFinancialData();
-    } else {
-        alert("Failed to add expense");
     }
 }
 
@@ -92,6 +113,12 @@ async function addCategory(type, event) {
     const token = localStorage.getItem("access_token");
     const input = document.getElementById(`new-${type}-category-name`);
     const name = input.value;
+    let payload = { name };
+    if (type === 'expense') {
+        const limitInput = document.getElementById('new-expense-category-limit');
+        const limit = limitInput.value;
+        if (limit) payload.limit = parseFloat(limit);
+    }
     if (!name) return;
     await fetchAPI(`/finances/${type}_categories/`, {
         method: 'POST',
@@ -99,9 +126,10 @@ async function addCategory(type, event) {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + token
         },
-        body: JSON.stringify({ name: name })
+        body: JSON.stringify(payload)
     });
     input.value = '';
+    if (type === 'expense') document.getElementById('new-expense-category-limit').value = '';
     loadCategories(type);
 }
 
@@ -138,11 +166,10 @@ async function loadCategories(type) {
                 const li = document.createElement('li');
                 li.id = `${type}-category-${category.id}`;
                 li.value = category.id;
-                li.textContent = category.name;
                 li.innerHTML = `
-                    <span>${category.name}</span>
+                    <span>${category.name}${type === 'expense' && category.limit !== null ? ` (Ліміт: ${category.limit})` : ''}</span>
                     <div class="category-buttons">
-                        <button onclick="toggleEditForm('${type}', ${category.id}, '${category.name}')">Edit</button>
+                        <button onclick="toggleEditForm('${type}', ${category.id}, '${category.name}', ${type === 'expense' ? category.limit : 'null'})">Edit</button>
                         <button onclick="deleteCategory('${type}', ${category.id})">Delete</button>
                     </div>
                 `;
@@ -158,7 +185,6 @@ function toggleEditForm(type, id, currentName) {
     const li = document.getElementById(`${type}-category-${id}`);
     const span = li.querySelector('span');
     const buttonsDiv = li.querySelector('.category-buttons');
-
     const existingEditForm = li.querySelector('.edit-form');
     if (existingEditForm) {
         existingEditForm.remove();
@@ -167,26 +193,42 @@ function toggleEditForm(type, id, currentName) {
     } else {
         span.style.display = 'none';
         buttonsDiv.style.display = 'none';
-
         const editForm = document.createElement('div');
         editForm.className = 'edit-form';
+        let limitInput = '';
+        if (type === 'expense') {
+            limitInput = `<input type="number" id="edit-limit-${type}-${id}" placeholder="Limit (optional)" min="0" step="0.01">`;
+        }
         editForm.innerHTML = `
             <input type="text" value="${currentName}" id="edit-input-${type}-${id}">
+            ${limitInput}
             <button onclick="updateCategory('${type}', ${id})">Save</button>
-            <button onclick="toggleEditForm('${type}', ${id}, '${currentName}')">Cancel</button>
+            <button onclick="toggleEditForm('${type}', ${id}, '${currentName}', ${arguments.length > 3 ? arguments[3] : 'null'})">Cancel</button>
         `;
         li.appendChild(editForm);
-        editForm.querySelector('input').focus();
+        editForm.querySelector('input[type="text"]').focus();
+        if (type === 'expense' && arguments.length > 3 && arguments[3] !== null) {
+            editForm.querySelector(`#edit-limit-${type}-${id}`).value = arguments[3];
+        }
     }
 }
 
 async function updateCategory(type, id) {
     const input = document.getElementById(`edit-input-${type}-${id}`);
     const newName = input.value;
+    let payload = { name: newName };
+    if (type === 'expense') {
+        const limitInput = document.getElementById(`edit-limit-${type}-${id}`);
+        if (limitInput && limitInput.value !== '') {
+            payload.limit = parseFloat(limitInput.value);
+        } else {
+            payload.limit = null;
+        }
+    }
     if (!newName) return;
     await fetchAPI(`/finances/${type}_categories/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ name: newName })
+        body: JSON.stringify(payload)
     });
     loadCategories(type);
 }

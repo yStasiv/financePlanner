@@ -26,6 +26,14 @@ def create_user(db: Session, user: schemas.UserCreate):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    # базові категорії
+    base_income = ["Uncategorized","Зарплата", "Подарунки"]
+    base_expense = ["Uncategorized", "Продукти", "Оренда", "Розваги"]
+    for name in base_income:
+        db.add(models.IncomeCategory(name=name, owner_id=db_user.id))
+    for name in base_expense:
+        db.add(models.ExpenseCategory(name=name, owner_id=db_user.id))
+    db.commit()
     return db_user
 
 
@@ -43,10 +51,29 @@ def get_expenses(db: Session, owner_id: int, start_date: Optional[date] = None, 
 
 
 def create_user_expense(db: Session, expense: schemas.ExpenseCreate, user_id: int):
+    """Create a new expense for the user, checking category limits if applicable."""
+    category_id = expense.category_id
+    if category_id:
+        category = db.query(models.ExpenseCategory).filter(models.ExpenseCategory.id == category_id, models.ExpenseCategory.owner_id == user_id).first()
+        
     db_expense = models.Expense(**expense.dict(), owner_id=user_id)
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
+    if category and category.limit is not None:
+            # Сумарні витрати по категорії
+            total_expenses = db.query(models.Expense).filter(models.Expense.category_id == category_id, models.Expense.owner_id == user_id).with_entities(models.Expense.amount).all()
+            total = sum([e.amount for e in total_expenses]) + expense.amount
+            if total > category.limit:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "message": f"Ліміт категорії '{category.name}' перевищено!",
+                        "limit": category.limit,
+                        "total": total,
+                        "exceeded": total - category.limit
+                    }
+                )
     return db_expense
 
 
