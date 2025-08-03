@@ -1,0 +1,56 @@
+<!-- {% extends "base.html" %}
+
+{% block content %}
+<h1>Інвестиції</h1>
+<button id="get-investments-btn">Переглянути дані</button>
+<div id="investments-result" style="margin-top:2em;"></div>
+<script>
+document.getElementById('get-investments-btn').onclick = async function() {
+    const token = localStorage.getItem('access_token');
+    const resp = await fetch('/finances/investments', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await resp.json();
+    if(data.total_invested == 0) {
+        document.getElementById('investments-result').innerText = "Спершу потрібно додати категорію 'Інвестиції / Investments' та вказати суму.";
+        return;
+    }
+    document.getElementById('investments-result').innerHTML = `
+        <div>Сума інвестицій: <b>${data.total_invested}</b></div>
+        <button id='show-json-btn' style='margin-bottom:1em;'>Показати JSON з бекенду</button>
+        <pre id='json-block' style='background:#f5f5f5;padding:1em;max-height:300px;overflow:auto;display:none;'></pre>
+    `;
+    document.getElementById('show-json-btn').onclick = function() {
+        const jsonBlock = document.getElementById('json-block');
+        jsonBlock.textContent = JSON.stringify(data, null, 2);
+        jsonBlock.style.display = 'block';
+    }
+}
+
+function renderTickers() {
+    const tickers = JSON.parse(localStorage.getItem('tickers') || '[]');
+    const tbody = document.querySelector('#tickers-table tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    tickers.forEach((t, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${t.ticker}</td>
+            <td>${t.amount}</td>
+            <td>${t.count !== null ? t.count : ''}</td>
+            <td>${t.price !== null ? t.price : ''}</td>
+            <td><button onclick='deleteTicker(${idx})'>✖</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function deleteTicker(idx) {
+    let tickers = JSON.parse(localStorage.getItem('tickers') || '[]');
+    tickers.splice(idx, 1);
+    localStorage.setItem('tickers', JSON.stringify(tickers));
+    renderTickers();
+}
+</script>
+{% endblock %}
+Ticker	Count of shares (%)	Average price	Current price	Total Income -->

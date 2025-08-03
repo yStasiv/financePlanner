@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import models
 from .database import engine
-from .routers import users, finances
+from .routers import users, finances, investments
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -14,7 +14,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 app.include_router(users.router, tags=["users"])
-app.include_router(finances.router, prefix="/finances" ,tags=["finances"],)
+app.include_router(finances.router, prefix="/finances" ,tags=["finances"])
+app.include_router(investments.router, prefix="/finances", tags=["investments"])
 
 @app.get("/")
 async def read_root(request: Request):
@@ -33,11 +34,11 @@ async def read_categories_page(request: Request):
     return templates.TemplateResponse("categories.html", {"request": request})
 
 @app.get("/investments")
-async def read_categories_page(request: Request):
+async def read_investments_page(request: Request):
     return templates.TemplateResponse("investments.html", {"request": request})
 
 @app.get("/advices")
-async def read_categories_page(request: Request):
+async def read_advices_page(request: Request):
     return templates.TemplateResponse("advices.html", {"request": request})
 
 @app.get("/login")

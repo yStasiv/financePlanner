@@ -1,19 +1,135 @@
 {% extends "base.html" %}
-
 {% block content %}
-<h1>User Investment info and data</h1>
-<table>
-    <thead>
-        <tr>
-            <th>Ticker</th>
-            <th>Count of shares (%)</th>
-            <th>Average price</th>
-            <th>Current price</th>
-            <th>Total Income</th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- User data will be populated here -->
-    </tbody>
+<h2>Інвестиції</h2>
+<H1 style="color:rgb(255, 0, 64);">Функціонал ще не працює</H1>
+<p><strong>Загальна сума інвестицій:</strong> <span id="total-invested">...</span></p>
+<p><strong>Залишок для розподілу:</strong> <span id="invest-remaining">...</span></p>
+
+<button id="get-investments-btn">Оновити дані з бекенду</button>
+
+<form id="add-ticker-form" style="margin:1em 0;display:flex;gap:1em;align-items:center;">
+  <input type="text" id="ticker-input" placeholder="Тикер" required style="width:100px;">
+  <input type="number" id="amount-input" placeholder="Сума" min="0.01" step="0.01" required style="width:100px;">
+  <input type="number" id="count-input" placeholder="Кількість" min="0" step="any" style="width:80px;">
+  <input type="number" id="price-input" placeholder="Ціна" min="0" step="any" style="width:80px;">
+  <button type="submit">Додати розподіл</button>
+</form>
+
+<div id="investments-result" style="margin-top:2em;"></div>
+
+<h3>Розподіл інвестицій (локально)</h3>
+<table id="tickers-table" border="1" cellpadding="5" style="margin-bottom:2em;">
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th>Сума</th>
+      <th>Кількість</th>
+      <th>Ціна</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- JS вставить рядки -->
+  </tbody>
 </table>
+
+<h3>Деталі витрат по категоріях</h3>
+<div id="investments-details">
+  <!-- JS вставить деталі -->
+</div>
+
+<script src="/static/investments.js"></script>
+<script>
+// Кнопка для отримання інвестицій з бекенду
+let totalInvested = 0;
+let investRemaining = 0;
+function updateInvestRemaining() {
+    const tickers = JSON.parse(localStorage.getItem('tickers') || '[]');
+    let sum = tickers.reduce((acc, t) => acc + (parseFloat(t.amount) || 0), 0);
+    investRemaining = totalInvested - sum;
+    document.getElementById('invest-remaining').textContent = investRemaining.toFixed(2);
+}
+
+document.getElementById('get-investments-btn').onclick = async function() {
+    const token = localStorage.getItem('access_token');
+    const resp = await fetch('/finances/investments', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await resp.json();
+    totalInvested = data.total_invested || 0;
+    document.getElementById('total-invested').textContent = totalInvested;
+    updateInvestRemaining();
+    if(data.total_invested == 0) {
+        document.getElementById('investments-result').innerText = "Спершу потрібно додати категорію 'Інвестиції / Investments' та вказати суму.";
+        return;
+    }
+    document.getElementById('investments-result').innerHTML = `
+        <div>Сума інвестицій: <b>${data.total_invested}</b></div>
+        <button id='show-json-btn' style='margin-bottom:1em;'>Показати JSON з бекенду</button>
+        <pre id='json-block' style='background:#f5f5f5;padding:1em;max-height:300px;overflow:auto;display:none;'></pre>
+    `;
+    document.getElementById('show-json-btn').onclick = function() {
+        const jsonBlock = document.getElementById('json-block');
+        jsonBlock.textContent = JSON.stringify(data, null, 2);
+        jsonBlock.style.display = 'block';
+    }
+}
+
+// Локальний розподіл інвестицій
+function renderTickers() {
+    const tickers = JSON.parse(localStorage.getItem('tickers') || '[]');
+    const tbody = document.querySelector('#tickers-table tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    tickers.forEach((t, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${t.ticker}</td>
+            <td>${t.amount}</td>
+            <td>${t.count !== null ? t.count : ''}</td>
+            <td>${t.price !== null ? t.price : ''}</td>
+            <td><button onclick='deleteTicker(${idx})'>✖</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function deleteTicker(idx) {
+    let tickers = JSON.parse(localStorage.getItem('tickers') || '[]');
+    tickers.splice(idx, 1);
+    localStorage.setItem('tickers', JSON.stringify(tickers));
+    renderTickers();
+}
+
+
+document.getElementById('add-ticker-form').onsubmit = function(e) {
+    e.preventDefault();
+    if (investRemaining <= 0) {
+        alert('Вся сума вже розподілена!');
+        return;
+    }
+    const ticker = document.getElementById('ticker-input').value.trim();
+    let amount = parseFloat(document.getElementById('amount-input').value);
+    let count = document.getElementById('count-input').value;
+    let price = document.getElementById('price-input').value;
+    if(!ticker || isNaN(amount) || amount <= 0) return;
+    if(amount > investRemaining) {
+        alert('Сума перевищує залишок для розподілу!');
+        return;
+    }
+    let tickers = JSON.parse(localStorage.getItem('tickers') || '[]');
+    tickers.push({ ticker, amount, count, price });
+    localStorage.setItem('tickers', JSON.stringify(tickers));
+    renderTickers();
+    updateInvestRemaining();
+    document.getElementById('add-ticker-form').reset();
+}
+
+window.renderTickers = renderTickers;
+window.deleteTicker = deleteTicker;
+document.addEventListener('DOMContentLoaded', function() {
+    renderTickers();
+    document.getElementById('get-investments-btn').click();
+});
+</script>
 {% endblock %}

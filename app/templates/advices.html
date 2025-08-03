@@ -1,16 +1,41 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>User Rating</h1>
-<table>
-    <thead>
-        <tr>
-            <th>User</th>
-            <th>Average Income</th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- User data will be populated here -->
-    </tbody>
-</table>
+<h1>Інвестиційні поради</h1>
+<H1 style="color:rgb(255, 0, 64);">Функціонал ще не працює</H1>
+<button id="get-advice-btn">Отримати поради</button>
+<div id="advice-result" style="margin-top:2em;"></div>
+<script>
+let canGetAdvice = true;
+document.getElementById('get-advice-btn').onclick = function() {
+    if (!canGetAdvice) {
+        alert("Наразі функція не активна");
+        return;
+    }
+
+    const advices = [
+        "Інвестуй лише ті гроші, які готовий втратити.",
+        "Диверсифікуй свої інвестиції, щоб зменшити ризики.",
+        "Не панікуй під час падіння ринку — це частина циклу.",
+        "Починай інвестувати якомога раніше — час працює на тебе.",
+        "Регулярно перевіряй портфель, але не перебільшуй.",
+        "Уникай вкладень, які обіцяють надто високі прибутки без ризику.",
+        "Навчайся: розуміння активів важливіше за сліпе слідування порадам.",
+        "Автоматизуй інвестиції — це знижує емоційний вплив.",
+        "Інвестуй у себе — знання приносять найвищий дохід.",
+        "Пам’ятай про інфляцію: гроші під подушкою втрачають цінність."
+    ];
+
+    const randomIndex = Math.floor(Math.random() * advices.length);
+    const randomAdvice = advices[randomIndex];
+
+    document.getElementById('advice-result').innerText = randomAdvice;
+
+    // Забороняємо новий запит на 60 секунд
+    canGetAdvice = false;
+    setTimeout(() => {
+        canGetAdvice = true;
+    }, 60000);
+};
+</script>
 {% endblock %}
